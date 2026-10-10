@@ -20,6 +20,37 @@ For the purpose of open-source reproducibility and peer review, the components h
 - **Constants vs Parameters**: In this published reference implementation, the limits are hardcoded model constants rather than dynamic ROS parameters. The server uses `D_noise = 50.0`, `D_crit = 1000.0`, `K = 10.0`. The plugin scales the received 0-100 values to a maximum penalty of `220`. 
 - **Mapping Implementations**: The repository provides both Python and C++ implementations of the radiation mapper. The **Python mapper** (`radiation_mapper.py`) was the one used in the mapping verification (which creates the CSV with measurement logs), and is the reference implementation for that experiment. The C++ version is provided for real-time online use.
 
+## System Interfaces and Node Contracts
+
+### Manager Contract (Node Parameters and Services)
+| Node | Interface | Data Passed |
+|---|---|---|
+| `/radiation_field_server` | `/radiation_field_server/set_parameters` | `is_active: bool; map_path: string` |
+| `/radiation_mapper` | `/radiation_mapper/set_parameters` | `map_path: string; is_recording: bool` |
+| `/virtual_geiger` | `/virtual_geiger/set_parameters` | `map_path: string; is_active: bool` |
+| Mapper | `/radiation_mapper/save_map` | `std_srvs/srv/Trigger` |
+| Mapper | `/radiation_mapper/clear_map` | `std_srvs/srv/Trigger` |
+
+### Data Flow (Topics)
+| Topic | Source &rarr; Destination | Type / Purpose |
+|---|---|---|
+| `/radiation/dose` | Virtual/Real sensor &rarr; Mapper | `std_msgs/msg/Float32`, Dose rate |
+| `/tf`, `/tf_static` | Localization &rarr; Mapper, Sensor | Position of `base_footprint` relative to `map` |
+| `/map` | Geometric Mapping &rarr; Server | `nav_msgs/msg/OccupancyGrid`, Grid geometry and unknown areas |
+| `/radiation/map_updated` | Mapper &rarr; Server | `std_msgs/msg/Empty`, File update notification |
+| `/radiation_map` | Server &rarr; RadiationLayer | `nav_msgs/msg/OccupancyGrid`, Normalized penalty 0–100, unknown −1 |
+| `/radiation_image/compressed` | Server &rarr; Web UI | `sensor_msgs/msg/CompressedImage`, Visual field representation |
+
+## Nav2 Configuration
+
+To connect the plugin to a Nav2 configuration, the custom class must be registered in your `nav2_params.yaml`. Because this standalone package registers the class under a different name than our internal workspace, modify your existing layer configuration as follows:
+
+```yaml
+radiation_layer:
+  plugin: "asymmetric_radiation_plugins::RadiationLayer"
+  radiation_topic: "/radiation_map"
+```
+
 ## Experimental Data and Result Reproduction
 
 The `logs` directory contains the raw data and summaries used for the paper:

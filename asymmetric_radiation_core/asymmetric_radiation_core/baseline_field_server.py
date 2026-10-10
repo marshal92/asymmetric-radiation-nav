@@ -9,6 +9,7 @@ from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 import numpy as np
 import cv2
 import os
+import json
 from pathlib import Path
 
 def resolve_map_path(maps_dir, map_path):
