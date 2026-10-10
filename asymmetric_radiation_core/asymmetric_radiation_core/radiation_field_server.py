@@ -21,7 +21,7 @@ class RadiationFieldServer(Node):
         self.d_crit = 1000.0     
         self.k = 10.0             
 
-        self.declare_parameter('static_map_path', '/home/oleksandr/ros2_ws/src/Asymmetric-radiation/asymmetric_radiation_core/maps/radiation_map_complex.npy')
+        self.declare_parameter('static_map_path', 'radiation_map_complex.npy')
         self.declare_parameter('live_map_path', '/dev/shm/live_rad_map.npy')
         
         self.static_map_path = self.get_parameter('static_map_path').value

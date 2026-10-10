@@ -19,7 +19,7 @@ using std::placeholders::_2;
 class RadiationMapperNode : public rclcpp::Node {
 public:
     RadiationMapperNode() : Node("radiation_mapper") {
-        this->declare_parameter("map_path", "explored_map.npy");
+        this->declare_parameter("save_map_path", "explored_map.npy");
         this->declare_parameter("is_recording", false);
         this->declare_parameter("width", 800);
         this->declare_parameter("height", 800);
@@ -27,7 +27,7 @@ public:
         this->declare_parameter("ox", -20.0);
         this->declare_parameter("oy", -20.0);
 
-        map_path_param_ = this->get_parameter("map_path").as_string();
+        save_map_path_param_ = this->get_parameter("save_map_path").as_string();
         is_recording_ = this->get_parameter("is_recording").as_bool();
         width_ = this->get_parameter("width").as_int();
         height_ = this->get_parameter("height").as_int();
@@ -38,7 +38,7 @@ public:
         map_grid_.resize(width_ * height_, 0.0f);
         weight_grid_.resize(width_ * height_, 0.0f);
 
-        resolve_paths(map_path_param_);
+        resolve_paths(save_map_path_param_);
         load_map();
 
         tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
@@ -100,7 +100,7 @@ public:
     }
 
 private:
-    std::string map_path_param_;
+    std::string save_map_path_param_;
     bool is_recording_;
     int width_, height_;
     double res_, ox_, oy_;
@@ -156,11 +156,11 @@ private:
                 } else {
                     disable_tf();
                 }
-            } else if (param.get_name() == "map_path") {
+            } else if (param.get_name() == "save_map_path") {
                 std::string new_path = param.as_string();
-                if (new_path != map_path_param_) {
+                if (new_path != save_map_path_param_) {
                     save_map();
-                    map_path_param_ = new_path;
+                    save_map_path_param_ = new_path;
                     resolve_paths(new_path);
                     load_map();
                 }
@@ -349,9 +349,7 @@ private:
         if (map_x_min >= map_x_max || map_y_min >= map_y_max) return;
         
         int mask_x_min = map_x_min - x_min;
-        int mask_x_max = mask_x_min + (map_x_max - map_x_min);
         int mask_y_min = map_y_min - y_min;
-        int mask_y_max = mask_y_min + (map_y_max - map_y_min);
         
         int mask_size = 2 * roi_r_ + 1;
         

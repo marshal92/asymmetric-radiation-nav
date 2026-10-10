@@ -17,8 +17,8 @@ class RadiationMapperWorker(Node):
         from rclpy.parameter import Parameter
         super().__init__('radiation_mapper_worker', parameter_overrides=[Parameter('use_sim_time', Parameter.Type.BOOL, use_sim_time)])
 
-        self.declare_parameter('map_path', 'explored_map.npy')
-        self.map_path_param = self.get_parameter('map_path').value
+        self.declare_parameter('save_map_path', 'explored_map.npy')
+        self.save_map_path_param = self.get_parameter('save_map_path').value
         
         self.declare_parameter('is_recording', False)
         self.is_recording = self.get_parameter('is_recording').value
@@ -42,7 +42,7 @@ class RadiationMapperWorker(Node):
         self.last_saved_pose = None
         self.last_saved_dose = None
 
-        self._resolve_paths(self.map_path_param)
+        self._resolve_paths(self.save_map_path_param)
         self._load_map()
 
         self.tf_buffer = tf2_ros.Buffer()
@@ -89,12 +89,12 @@ class RadiationMapperWorker(Node):
                     self._timer_shm_update()
                 else:
                     self._disable_tf()
-            elif param.name == 'map_path':
+            elif param.name == 'save_map_path':
                 new_path = param.value
-                if new_path != self.map_path_param:
+                if new_path != self.save_map_path_param:
                     self.get_logger().info(f"Map path changing to: {new_path}. Saving current map first...")
                     self._save_map()
-                    self.map_path_param = new_path
+                    self.save_map_path_param = new_path
                     self._resolve_paths(new_path)
                     self._load_map()
                     self.map_dirty = True
@@ -120,17 +120,9 @@ class RadiationMapperWorker(Node):
         response.message = "Map cleared in memory."
         return response
 
-    def _resolve_paths(self, map_path_param):
-        pkg_share = get_package_share_directory('asymmetric_radiation_core')
-        src_dir = pkg_share.replace('install/asymmetric_radiation_core/share/asymmetric_radiation_core', 'src/Asymmetric-radiation/asymmetric_radiation_core')
-        base_dir = os.path.join(src_dir, 'maps')
-        os.makedirs(base_dir, exist_ok=True)
-        
-        if not os.path.isabs(map_path_param):
-            self.map_file = os.path.join(base_dir, map_path_param)
-        else:
-            self.map_file = map_path_param
-            base_dir = os.path.dirname(self.map_file)
+    def _resolve_paths(self, save_map_path_param):
+        self.map_file = save_map_path_param
+        base_dir = os.path.dirname(self.map_file) if os.path.dirname(self.map_file) else '.'
             
         base_name = os.path.splitext(os.path.basename(self.map_file))[0]
         self.weight_file = os.path.join(base_dir, f"{base_name}_weights.npy")
@@ -331,8 +323,8 @@ class RadiationMapperManager(Node):
             if param.name == 'is_recording':
                 self._apply_state(param.value)
             elif self.worker is not None:
-                if param.name == 'map_path':
-                    self.worker.map_path_param = param.value
+                if param.name == 'save_map_path':
+                    self.worker.save_map_path_param = param.value
                     self.worker._resolve_paths(param.value)
                     self.worker._load_map()
         return SetParametersResult(successful=True)

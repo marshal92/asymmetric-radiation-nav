@@ -33,7 +33,6 @@ The `logs` directory contains the raw data and summaries used for the paper:
 
 *Note: Old `proposed` runs in `series_00` and additional `A/B/C` simulations are historical checkpoints and are not included in the main tables of the current article.*
 
-To reproduce the table calculations, we provide a Python script `process_tables.py` in the root of the repository.
 - Movement boundaries are determined by velocity thresholds: `|v| > 0.03` m/s or `|ω| > 0.03` rad/s.
 - Internal stops are preserved in the total duration.
 - Cumulative exposure in simulation is integrated using the trapezoidal rule over the initial ground-truth field.
@@ -59,19 +58,25 @@ You can run the core components using standard ROS 2 CLI tools.
 **1. Start the Virtual Geiger Sensor:**
 *(Measures the original ground-truth field)*
 ```bash
-ros2 run asymmetric_radiation_plugins virtual_geiger_node --ros-args -p map_path:=/path/to/maps/radiation_map_complex.npy
+ros2 run asymmetric_radiation_plugins virtual_geiger_node --ros-args -p map_path:=/absolute/path/to/radiation_map_complex.npy
 ```
 
-**2. Start the Radiation Field Server:**
+**2. Start the Radiation Field Server (Proposed ALARA):**
 *(Reads the live map via shared memory and publishes costmaps)*
 ```bash
-ros2 run asymmetric_radiation_core radiation_field_server
+ros2 run asymmetric_radiation_core radiation_field_server --ros-args -p static_map_path:=/absolute/path/to/radiation_map_complex.npy
+```
+
+**2.1 (Optional) Start the Baseline Server instead:**
+*(Publishes simple binary obstacle costmap)*
+```bash
+ros2 run asymmetric_radiation_core baseline_field_server --ros-args -p static_map_path:=/absolute/path/to/radiation_map_complex.npy
 ```
 
 **3. Start the Mapper:**
 *(Updates the live map in shared memory)*
 ```bash
-ros2 run asymmetric_radiation_plugins radiation_mapper_node
+ros2 run asymmetric_radiation_plugins radiation_mapper_node --ros-args -p save_map_path:=/absolute/path/to/explored_map.npy
 ```
 
 **4. Control via Parameters:**

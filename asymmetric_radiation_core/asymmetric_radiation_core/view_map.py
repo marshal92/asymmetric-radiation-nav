@@ -94,8 +94,8 @@ def main():
     init_k = 5.0
 
     cost_map = calc_costmap(dose_map, init_noise, init_crit, init_k)
-    img_cost = ax_cost.imshow(cost_map, cmap='turbo', origin='lower', extent=extent, vmin=0, vmax=252)
-    ax_cost.set_title("Costmap (C++ Plugin: 0-252)")
+    img_cost = ax_cost.imshow(cost_map, cmap='turbo', origin='lower', extent=extent, vmin=0, vmax=220)
+    ax_cost.set_title("Costmap (C++ Plugin: 0-220)")
     ax_cost.set_xlabel("X (meters)")
     fig.colorbar(img_cost, ax=ax_cost, fraction=0.046, pad=0.04)
 
