@@ -35,7 +35,6 @@ setup(
             'generate_map = asymmetric_radiation_core.generate_map:main',
             'view_map = asymmetric_radiation_core.view_map:main',
             'radiation_mapper = asymmetric_radiation_core.radiation_mapper:main',
-            'ground_truth_logger = asymmetric_radiation_core.ground_truth_logger:main',
             'radiation_run_logger = asymmetric_radiation_core.radiation_run_logger:main',
         ],
     },

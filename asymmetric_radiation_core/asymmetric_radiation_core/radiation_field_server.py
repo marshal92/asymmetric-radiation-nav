@@ -10,7 +10,6 @@ import numpy as np
 import cv2
 import os
 import json
-from ament_index_python.packages import get_package_share_directory
 
 class RadiationFieldServer(Node):
     def __init__(self):
@@ -22,24 +21,17 @@ class RadiationFieldServer(Node):
         self.d_crit = 1000.0     
         self.k = 10.0             
 
-        self.declare_parameter('map_path', 'explored_map.npy')
-        map_path_param = self.get_parameter('map_path').value
+        self.declare_parameter('static_map_path', '/home/oleksandr/ros2_ws/src/Asymmetric-radiation/asymmetric_radiation_core/maps/radiation_map_complex.npy')
+        self.declare_parameter('live_map_path', '/dev/shm/live_rad_map.npy')
         
-        # DIRECT SRC LOAD using dynamic resolution
-        pkg_share = get_package_share_directory('asymmetric_radiation_core')
-        src_dir = pkg_share.replace('install/asymmetric_radiation_core/share/asymmetric_radiation_core', 'src/Asymmetric-radiation/asymmetric_radiation_core')
-        base_dir = os.path.join(src_dir, 'maps')
-        
-        if not os.path.isabs(map_path_param):
-            self.map_file = os.path.join(base_dir, map_path_param)
-        else:
-            self.map_file = map_path_param
+        self.static_map_path = self.get_parameter('static_map_path').value
+        self.live_map_path = self.get_parameter('live_map_path').value
             
         self.rad_ox = -20.0
         self.rad_oy = -20.0
         self.rad_res = 0.05
             
-        self.load_map_from_disk()
+        self.load_map_from_disk(self.static_map_path)
 
         map_qos = QoSProfile(depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL)
         self.trigger_sub = self.create_subscription(Empty, '/radiation/map_updated', self.trigger_cb, 10)
@@ -62,32 +54,25 @@ class RadiationFieldServer(Node):
             if param.name == 'is_active':
                 self.is_active = param.value
                 self.publish_map()
-            elif param.name == 'map_path':
-                map_path_param = param.value
-                if not os.path.isabs(map_path_param):
-                    pkg_share = get_package_share_directory('asymmetric_radiation_core')
-                    src_dir = pkg_share.replace('install/asymmetric_radiation_core/share/asymmetric_radiation_core', 'src/Asymmetric-radiation/asymmetric_radiation_core')
-                    base_dir = os.path.join(src_dir, 'maps')
-                    self.map_file = os.path.join(base_dir, map_path_param)
-                else:
-                    self.map_file = map_path_param
-                self.load_map_from_disk()
+            elif param.name == 'static_map_path':
+                self.static_map_path = param.value
+                self.load_map_from_disk(self.static_map_path)
                 if self.last_map_msg is not None:
                     self.cached_width = 0
                     self.cached_height = 0
                     self.map_callback(self.last_map_msg)
         return SetParametersResult(successful=True)
 
-    def load_map_from_disk(self):
+    def load_map_from_disk(self, file_path):
         try:
-            self.raw_dose_map = np.load(self.map_file)
-            self.get_logger().info(f"Successfully loaded Live Map: {self.raw_dose_map.shape}")
+            self.raw_dose_map = np.load(file_path)
+            self.get_logger().info(f"Successfully loaded Live Map: {self.raw_dose_map.shape} from {file_path}")
         except Exception as e:
-            self.get_logger().warn(f"Map {self.map_file} not found. Awaiting mapper generation.")
+            self.get_logger().warn(f"Map {file_path} not found. Awaiting mapper generation.")
             self.raw_dose_map = np.zeros((800, 800), dtype=np.float32)
 
-        base_dir = os.path.dirname(self.map_file)
-        base_name = os.path.splitext(os.path.basename(self.map_file))[0]
+        base_dir = os.path.dirname(file_path)
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
         meta_file = os.path.join(base_dir, f"{base_name}_meta.json")
         
         if os.path.exists(meta_file):
@@ -102,8 +87,8 @@ class RadiationFieldServer(Node):
                 pass
 
     def trigger_cb(self, msg):
-        self.get_logger().info("==> Received /radiation/map_updated trigger! Loading new SHM map...")
-        self.load_map_from_disk()
+        self.get_logger().info(f"==> Received /radiation/map_updated trigger! Loading new SHM map from {self.live_map_path}...")
+        self.load_map_from_disk(self.live_map_path)
         if self.last_map_msg is not None:
             self.cached_width = 0
             self.cached_height = 0
@@ -187,7 +172,6 @@ class RadiationFieldServer(Node):
         rad_msg.info = self.last_map_msg.info
         rad_msg.data = final_grid.flatten().tolist()
         self.rad_pub.publish(rad_msg)
-        self.get_logger().info(f"==> Published OccupancyGrid. Active: {self.is_active}, Max Value: {np.max(final_grid)}, Non-zero: {np.count_nonzero(final_grid > 0)}")
         heatmap_gray = (final_grid * 255.0 / 100.0).astype(np.uint8)
         heatmap_color = cv2.applyColorMap(heatmap_gray, cv2.COLORMAP_TURBO)
         

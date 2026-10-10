@@ -109,14 +109,7 @@ private:
     }
 
     void load_truth_map(const std::string &filename) {
-        std::string base_dir = "/home/oleksandr/ros2_ws/src/Asymmetric-radiation/asymmetric_radiation_core/maps";
-        std::string map_file;
-        std::filesystem::path p(filename);
-        if (p.is_absolute()) {
-            map_file = filename;
-        } else {
-            map_file = base_dir + "/" + filename;
-        }
+        std::string map_file = filename;
         
         std::string base_name = map_file.substr(0, map_file.find_last_of('.'));
         std::string ext = map_file.substr(map_file.find_last_of('.'));

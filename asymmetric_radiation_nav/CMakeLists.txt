@@ -4,7 +4,7 @@ project(asymmetric_radiation_nav)
 find_package(ament_cmake REQUIRED)
 
 install(
-  DIRECTORY config behavior_trees
+  DIRECTORY config
   DESTINATION share/${PROJECT_NAME}
 )
 

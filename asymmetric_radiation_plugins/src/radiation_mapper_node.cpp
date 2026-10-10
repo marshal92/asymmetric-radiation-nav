@@ -172,13 +172,7 @@ private:
     }
 
     void resolve_paths(const std::string &filename) {
-        std::string base_dir = "/home/oleksandr/ros2_ws/src/Asymmetric-radiation/asymmetric_radiation_core/maps";
-        std::filesystem::path p(filename);
-        if (p.is_absolute()) {
-            map_file_ = filename;
-        } else {
-            map_file_ = base_dir + "/" + filename;
-        }
+        map_file_ = filename;
         
         std::string base_name = map_file_.substr(0, map_file_.find_last_of('.'));
         std::string ext = map_file_.substr(map_file_.find_last_of('.'));

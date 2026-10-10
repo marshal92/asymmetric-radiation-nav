@@ -224,7 +224,7 @@ global_costmap:
       plugins: ["static_layer", "obstacle_layer", "inflation_layer", "radiation_layer"]
       
       radiation_layer:
-        plugin: "asymmetric_radiation_plugins::RadiationLayer"
+        plugin: "smart_plugins::RadiationLayer"
         radiation_topic: "/radiation_map"
    
       obstacle_layer:
