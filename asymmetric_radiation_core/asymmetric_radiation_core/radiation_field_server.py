@@ -11,6 +11,14 @@ import cv2
 import os
 import json
 
+from pathlib import Path
+
+def resolve_map_path(maps_dir, map_path):
+    path = Path(map_path).expanduser()
+    if not path.is_absolute():
+        path = Path(maps_dir).expanduser() / path
+    return str(path)
+
 class RadiationFieldServer(Node):
     def __init__(self):
         from rclpy.parameter import Parameter
@@ -21,17 +29,18 @@ class RadiationFieldServer(Node):
         self.d_crit = 1000.0     
         self.k = 10.0             
 
-        self.declare_parameter('static_map_path', 'radiation_map_complex.npy')
-        self.declare_parameter('live_map_path', '/dev/shm/live_rad_map.npy')
+        self.declare_parameter('maps_dir', '')
+        self.declare_parameter('map_path', 'radiation_map_complex.npy')
         
-        self.static_map_path = self.get_parameter('static_map_path').value
-        self.live_map_path = self.get_parameter('live_map_path').value
+        self.maps_dir = self.get_parameter('maps_dir').value
+        self.map_path = self.get_parameter('map_path').value
+        self.map_file = resolve_map_path(self.maps_dir, self.map_path)
             
         self.rad_ox = -20.0
         self.rad_oy = -20.0
         self.rad_res = 0.05
             
-        self.load_map_from_disk(self.static_map_path)
+        self.load_map_from_disk(self.map_file)
 
         map_qos = QoSProfile(depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL)
         self.trigger_sub = self.create_subscription(Empty, '/radiation/map_updated', self.trigger_cb, 10)
@@ -54,9 +63,18 @@ class RadiationFieldServer(Node):
             if param.name == 'is_active':
                 self.is_active = param.value
                 self.publish_map()
-            elif param.name == 'static_map_path':
-                self.static_map_path = param.value
-                self.load_map_from_disk(self.static_map_path)
+            elif param.name == 'maps_dir':
+                self.maps_dir = param.value
+                self.map_file = resolve_map_path(self.maps_dir, self.map_path)
+                self.load_map_from_disk(self.map_file)
+                if self.last_map_msg is not None:
+                    self.cached_width = 0
+                    self.cached_height = 0
+                    self.map_callback(self.last_map_msg)
+            elif param.name == 'map_path':
+                self.map_path = param.value
+                self.map_file = resolve_map_path(self.maps_dir, self.map_path)
+                self.load_map_from_disk(self.map_file)
                 if self.last_map_msg is not None:
                     self.cached_width = 0
                     self.cached_height = 0
@@ -87,8 +105,8 @@ class RadiationFieldServer(Node):
                 pass
 
     def trigger_cb(self, msg):
-        self.get_logger().info(f"==> Received /radiation/map_updated trigger! Loading new SHM map from {self.live_map_path}...")
-        self.load_map_from_disk(self.live_map_path)
+        self.get_logger().info(f"==> Received /radiation/map_updated trigger! Reloading map from {self.map_file}...")
+        self.load_map_from_disk(self.map_file)
         if self.last_map_msg is not None:
             self.cached_width = 0
             self.cached_height = 0

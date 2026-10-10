@@ -19,7 +19,8 @@ using std::placeholders::_2;
 class RadiationMapperNode : public rclcpp::Node {
 public:
     RadiationMapperNode() : Node("radiation_mapper") {
-        this->declare_parameter("save_map_path", "explored_map.npy");
+        this->declare_parameter("maps_dir", "");
+        this->declare_parameter("map_path", "explored_map.npy");
         this->declare_parameter("is_recording", false);
         this->declare_parameter("width", 800);
         this->declare_parameter("height", 800);
@@ -27,7 +28,8 @@ public:
         this->declare_parameter("ox", -20.0);
         this->declare_parameter("oy", -20.0);
 
-        save_map_path_param_ = this->get_parameter("save_map_path").as_string();
+        maps_dir_ = this->get_parameter("maps_dir").as_string();
+        map_path_param_ = this->get_parameter("map_path").as_string();
         is_recording_ = this->get_parameter("is_recording").as_bool();
         width_ = this->get_parameter("width").as_int();
         height_ = this->get_parameter("height").as_int();
@@ -38,7 +40,7 @@ public:
         map_grid_.resize(width_ * height_, 0.0f);
         weight_grid_.resize(width_ * height_, 0.0f);
 
-        resolve_paths(save_map_path_param_);
+        resolve_paths(map_path_param_);
         load_map();
 
         tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
@@ -99,8 +101,8 @@ public:
         save_map();
     }
 
-private:
-    std::string save_map_path_param_;
+    std::string maps_dir_;
+    std::string map_path_param_;
     bool is_recording_;
     int width_, height_;
     double res_, ox_, oy_;
@@ -156,11 +158,15 @@ private:
                 } else {
                     disable_tf();
                 }
-            } else if (param.get_name() == "save_map_path") {
+            } else if (param.get_name() == "maps_dir") {
+                maps_dir_ = param.as_string();
+                resolve_paths(map_path_param_);
+                load_map();
+            } else if (param.get_name() == "map_path") {
                 std::string new_path = param.as_string();
-                if (new_path != save_map_path_param_) {
+                if (new_path != map_path_param_) {
                     save_map();
-                    save_map_path_param_ = new_path;
+                    map_path_param_ = new_path;
                     resolve_paths(new_path);
                     load_map();
                 }
@@ -172,7 +178,13 @@ private:
     }
 
     void resolve_paths(const std::string &filename) {
-        map_file_ = filename;
+        std::filesystem::path p(filename);
+        if (p.is_absolute()) {
+            map_file_ = filename;
+        } else {
+            std::filesystem::path md(maps_dir_);
+            map_file_ = (md / p).string();
+        }
         
         std::string base_name = map_file_.substr(0, map_file_.find_last_of('.'));
         std::string ext = map_file_.substr(map_file_.find_last_of('.'));

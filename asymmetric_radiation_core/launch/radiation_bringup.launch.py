@@ -6,15 +6,15 @@ from launch.conditions import IfCondition
 from launch_ros.actions import Node
 
 def generate_launch_description():
-    static_map_path_arg = DeclareLaunchArgument(
-        'static_map_path',
-        default_value='radiation_map_complex.npy',
-        description='Path to the static radiation map for the field server'
+    maps_dir_arg = DeclareLaunchArgument(
+        'maps_dir',
+        default_value=os.path.expanduser('~/ros2_ws/src/Asymmetric-radiation/asymmetric_radiation_core/maps'),
+        description='Directory containing radiation maps'
     )
-    save_map_path_arg = DeclareLaunchArgument(
-        'save_map_path',
+    map_path_arg = DeclareLaunchArgument(
+        'map_path',
         default_value='explored_map.npy',
-        description='Path to save the generated map from radiation_mapper'
+        description='Map file name or absolute path'
     )
     sensor_map_path_arg = DeclareLaunchArgument(
         'sensor_map_path',
@@ -48,7 +48,8 @@ def generate_launch_description():
         name='radiation_field_server',
         output='screen',
         parameters=[{
-            'static_map_path': LaunchConfiguration('static_map_path'),
+            'maps_dir': LaunchConfiguration('maps_dir'),
+            'map_path': LaunchConfiguration('map_path'),
             'use_sim_time': False
         }]
     )
@@ -59,7 +60,8 @@ def generate_launch_description():
         name='radiation_mapper',
         output='screen',
         parameters=[{
-            'save_map_path': LaunchConfiguration('save_map_path'),
+            'maps_dir': LaunchConfiguration('maps_dir'),
+            'map_path': LaunchConfiguration('map_path'),
             'use_sim_time': False,
             'worker_use_sim_time': use_sim_time
         }]
@@ -80,12 +82,17 @@ def generate_launch_description():
         name='virtual_geiger',
         output='screen',
         condition=IfCondition(LaunchConfiguration('use_virtual_geiger')),
-        parameters=[{'use_sim_time': False, 'worker_use_sim_time': use_sim_time, 'map_path': LaunchConfiguration('sensor_map_path')}]
+        parameters=[{
+            'maps_dir': LaunchConfiguration('maps_dir'),
+            'map_path': LaunchConfiguration('sensor_map_path'),
+            'use_sim_time': False,
+            'worker_use_sim_time': use_sim_time
+        }]
     )
 
     return LaunchDescription([
-        static_map_path_arg,
-        save_map_path_arg,
+        maps_dir_arg,
+        map_path_arg,
         sensor_map_path_arg,
         use_sim_time_arg,
         use_virtual_geiger_arg,

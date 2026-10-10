@@ -9,19 +9,26 @@ from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 import numpy as np
 import cv2
 import os
-import json
-from ament_index_python.packages import get_package_share_directory
+from pathlib import Path
+
+def resolve_map_path(maps_dir, map_path):
+    path = Path(map_path).expanduser()
+    if not path.is_absolute():
+        path = Path(maps_dir).expanduser() / path
+    return str(path)
 
 class BaselineFieldServer(Node):
     def __init__(self):
         super().__init__('baseline_field_server')
 
-        self.declare_parameter('static_map_path', 'radiation_map_complex.npy')
+        self.declare_parameter('maps_dir', '')
+        self.declare_parameter('map_path', 'radiation_map_complex.npy')
         self.declare_parameter('radiation_threshold', 1000.0)
         self.declare_parameter('radiation_cost', 95) # 95 -> ~241 in Costmap (high penalty, but not a solid wall)
         self.declare_parameter('is_active', False)
         
-        self.static_map_path_param = self.get_parameter('static_map_path').value
+        self.maps_dir = self.get_parameter('maps_dir').value
+        self.map_path = self.get_parameter('map_path').value
         self.radiation_threshold = self.get_parameter('radiation_threshold').value
         self.radiation_cost = self.get_parameter('radiation_cost').value
         self.is_active = self.get_parameter('is_active').value
@@ -47,7 +54,7 @@ class BaselineFieldServer(Node):
         self.get_logger().info(f"Baseline Server started! Threshold: {self.radiation_threshold}")
 
     def _resolve_map_path(self):
-        self.map_file = self.static_map_path_param
+        self.map_file = resolve_map_path(self.maps_dir, self.map_path)
 
     def param_callback(self, params):
         for param in params:
@@ -64,8 +71,14 @@ class BaselineFieldServer(Node):
                 self.get_logger().info(f"Updated radiation cost to {self.radiation_cost}")
                 if self.last_map_msg is not None:
                     self.map_callback(self.last_map_msg)
-            elif param.name == 'static_map_path':
-                self.static_map_path_param = param.value
+            elif param.name == 'maps_dir':
+                self.maps_dir = param.value
+                self._resolve_map_path()
+                self.load_map_from_disk()
+                if self.last_map_msg is not None:
+                    self.map_callback(self.last_map_msg)
+            elif param.name == 'map_path':
+                self.map_path = param.value
                 self._resolve_map_path()
                 self.load_map_from_disk()
                 if self.last_map_msg is not None:

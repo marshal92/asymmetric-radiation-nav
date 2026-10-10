@@ -16,9 +16,11 @@ using std::placeholders::_1;
 class VirtualGeigerNode : public rclcpp::Node {
 public:
     VirtualGeigerNode() : Node("virtual_geiger") {
+        this->declare_parameter("maps_dir", "");
         this->declare_parameter("map_path", "radiation_map.npy");
         this->declare_parameter("is_active", false);
 
+        maps_dir_ = this->get_parameter("maps_dir").as_string();
         map_path_param_ = this->get_parameter("map_path").as_string();
         is_active_ = this->get_parameter("is_active").as_bool();
         
@@ -53,6 +55,7 @@ public:
     }
 
 private:
+    std::string maps_dir_;
     std::string map_path_param_;
     bool is_active_;
     
@@ -95,6 +98,11 @@ private:
                     msg.data = 0.0f;
                     dose_pub_->publish(msg);
                 }
+            } else if (param.get_name() == "maps_dir") {
+                maps_dir_ = param.as_string();
+                if (is_active_) {
+                    load_truth_map(map_path_param_);
+                }
             } else if (param.get_name() == "map_path") {
                 std::string new_path = param.as_string();
                 map_path_param_ = new_path;
@@ -109,7 +117,14 @@ private:
     }
 
     void load_truth_map(const std::string &filename) {
-        std::string map_file = filename;
+        std::string map_file;
+        std::filesystem::path p(filename);
+        if (p.is_absolute()) {
+            map_file = filename;
+        } else {
+            std::filesystem::path md(maps_dir_);
+            map_file = (md / p).string();
+        }
         
         std::string base_name = map_file.substr(0, map_file.find_last_of('.'));
         std::string ext = map_file.substr(map_file.find_last_of('.'));

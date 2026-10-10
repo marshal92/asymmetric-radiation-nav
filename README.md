@@ -55,31 +55,18 @@ The `logs` directory contains the raw data and summaries used for the paper:
 You can run the core components using standard ROS 2 CLI tools.
 **Note**: The system requires an active `/map` topic and a valid TF tree providing `map -> base_footprint`.
 
-**1. Start the Virtual Geiger Sensor:**
-*(Measures the original ground-truth field)*
+**1. Start the System using Launch:**
+This is the recommended way to start all components together:
 ```bash
-ros2 run asymmetric_radiation_plugins virtual_geiger_node --ros-args -p map_path:=/absolute/path/to/radiation_map_complex.npy
+ros2 launch asymmetric_radiation_core radiation_bringup.launch.py \
+  maps_dir:=/home/oleksandr/ros2_ws/src/Asymmetric-radiation/asymmetric_radiation_core/maps \
+  map_path:=explored_map.npy \
+  sensor_map_path:=radiation_map_complex.npy
 ```
 
-**2. Start the Radiation Field Server (Proposed ALARA):**
-*(Reads the live map via shared memory and publishes costmaps)*
-```bash
-ros2 run asymmetric_radiation_core radiation_field_server --ros-args -p static_map_path:=/absolute/path/to/radiation_map_complex.npy
-```
+*(Alternatively, you can run individual nodes with `ros2 run` using `maps_dir` and `map_path` parameters)*
 
-**2.1 (Optional) Start the Baseline Server instead:**
-*(Publishes simple binary obstacle costmap)*
-```bash
-ros2 run asymmetric_radiation_core baseline_field_server --ros-args -p static_map_path:=/absolute/path/to/radiation_map_complex.npy
-```
-
-**3. Start the Mapper:**
-*(Updates the live map in shared memory)*
-```bash
-ros2 run asymmetric_radiation_plugins radiation_mapper_node --ros-args -p save_map_path:=/absolute/path/to/explored_map.npy
-```
-
-**4. Control via Parameters:**
+**2. Control via Parameters:**
 
 To enable the virtual geiger:
 ```bash
