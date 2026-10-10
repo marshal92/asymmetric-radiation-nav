@@ -9,8 +9,7 @@ This repository contains the core ROS 2 reference implementation for the paper o
   - `AsymmetricRadiationLayer`: A custom `nav2_costmap_2d` plugin that dynamically integrates the non-linear transfer function outputs into the global costmap.
   - `radiation_mapper_node`: A C++ node for real-time radiation field mapping using Gaussian splatting and shared memory.
   - `virtual_geiger_node`: A C++ node simulating a geiger counter based on ground-truth maps and TF.
-- **`asymmetric_radiation_nav`**: Baseline and customized Nav2 configurations (`nav2_params.yaml`) demonstrating how to integrate the custom `AsymmetricRadiationLayer` into the global costmap.
-- **`logs`**: Experimental data, passport files, and ROS bag summaries from the test runs described in the paper.
+- **`logs`**: Experimental data, passport files, ROS bag summaries, and historical Nav2 configurations (`nav2_params.yaml`) demonstrating how to integrate the custom `AsymmetricRadiationLayer` into the global costmap.
 
 ## Architecture and Components
 
@@ -78,7 +77,7 @@ The `logs` directory contains the raw data and summaries used for the paper:
    ```
 3. Build the workspace:
    ```bash
-   colcon build --packages-select asymmetric_radiation_core asymmetric_radiation_plugins asymmetric_radiation_nav
+   colcon build --packages-select asymmetric_radiation_core asymmetric_radiation_plugins
    ```
 
 ## How to Run (Minimal Working Example)
